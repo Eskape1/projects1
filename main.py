@@ -30,26 +30,8 @@ class Pomidor:
         print("Pause")
         sleep(self.pause_time * self._minute)
 
-    def check_history(self):  #func checks file exist. if not - creates new. Return data from file
-        if not os.path.exists(self.history) or os.path.getsize(self.history) == 0:
-            return {}
-        with open(self.history, "r") as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                return {}
-
-    def check_log(self):  #func checks file exist. if not - creates new. Return data from file
-        if not os.path.exists(self.log) or os.path.getsize(self.log) == 0:
-            return {}
-        with open(self.log, "r") as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                return {}
-
     def save_history(self):
-        data = self.check_history()
+        data = self.check_json(self.history)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         if self.user_name in data:
@@ -57,12 +39,10 @@ class Pomidor:
             data[self.user_name]['time'] = now
         else:
                 data[self.user_name] = {'session': self.count_of_sessions, 'time':now}
-
-        with open(self.history, 'w') as file:
-            json.dump(data, file, indent=4)
+        self.write_json(self.history, data)
 
     def save_log(self):
-        data = self.check_log()
+        data = self.check_json(self.log)
         now = datetime.now().strftime("%Y-%m-%d")
         duration = self.find_duration()
         if self.user_name in data:
@@ -76,9 +56,21 @@ class Pomidor:
                                      'start_time': self.start_time,
                                      'end_time': self.end_time,
                                      'duration': duration}]
+        self.write_json(self.log, data)
 
-        with open(self.log, 'w') as file:
-            json.dump(data, file, indent=4)
+    @staticmethod
+    def check_json(path):
+        if not os.path.exists(path) or os.path.getsize(path) == 0:
+            return {}
+        with open(path, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+    @staticmethod
+    def write_json(path, data):
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=4)
 
     def find_duration(self):
         h, m, s = map(int, self.start_time.split(':'))
