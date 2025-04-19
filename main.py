@@ -1,31 +1,72 @@
 from time import sleep
+import json
+import os
 
-def job(minutes):
-    print("Start working!!")
-    sleep(25*minutes)
+class Pomidor:
 
-def pause(minutes):
-    print("Pause")
-    sleep(5 * minutes)
+    def __init__(self, user_name, job_time=25, pause_time=5):
+        self.user_name = user_name
+        self.job_time = job_time
+        self.pause_time = pause_time
+        self._minute = 2
+        self.count_of_sessions = 0
+        self.history = 'history.json'
 
-def asking():  #will ask user about new session
-    answer = input("Do you want to start a new session? [y/n]: ").lower()
-    return answer == 'y'  #will finish program if answer = False
+    def time_config(self):
+        if input('Do you want to configurate time? [y/n]: ').lower() == 'y':
+            self.job_time = int(input("How many minutes will you work: "))
+            self.pause_time = int(input("How many minutes will you relax: "))
+            return self.job_time, self.pause_time
 
-def save_history(n, s):  #name, session_count
-    with open('history.txt', 'w') as file:
-        file.write(f"Name = {n}\nNumber of sessions: {s}")
+    def job(self):
+        print("Start working!!")
+        sleep(self.job_time * self._minute)
 
-name = input("Enter your name: ")
-minute = 60  #how many seconds in one minute
-session_count = 0  #number of sessions
-is_running = True
+    def pause(self):
+        print("Pause")
+        sleep(self.pause_time * self._minute)
 
-while is_running:
-    job(minute)
-    session_count += 1  #one session was finished
-    pause(minute)
-    is_running = asking()
+    def check_history(self):
+        if os.path.exists(self.history) and os.path.getsize(self.history) > 0:
+            with open(self.history, "r") as file:
+                try:
+                    data = json.load(file)
+                    return data
+                except json.JSONDecodeError:
+                    data = {}
+                    return data
 
-save_history(name, session_count)
+        else:
+            data = {}
+            return data
+
+    def save_history(self):
+        data = self.check_history()
+        try:
+            if data[self.user_name] in data.values():
+                data[self.user_name] += self.count_of_sessions
+                with open(self.history, 'w') as file:
+                    json.dump(data, file, indent=4)
+        except KeyError:
+            with open(self.history, 'w') as file:
+                data[self.user_name] = self.count_of_sessions
+                json.dump(data, file, indent=4)
+
+
+    def session(self):
+        is_running = True
+
+        self.time_config()
+        while is_running:
+            self.job()
+            self.count_of_sessions += 1  # one session was finished
+            self.pause()
+            answer = input("Start another session? [y/n]: ").lower()
+            is_running = answer == "y"
+        self.save_history()
+
+if __name__ == '__main__':
+    s = Pomidor(input("Enter your name: "))
+    Pomidor.session(s)
+    print('Bye!')
 
