@@ -2,38 +2,51 @@ from time import sleep
 import json
 import os
 from datetime import datetime, timedelta
+#import json_handler
+
 
 class Pomidor:
 
-    def __init__(self, user_name, job_time=25, pause_time=5):  #standart values without configuration
+    def __init__(self, user_name, job_time=25, pause_time=5):  #standart values without configuration in minutes
         self.user_name = user_name
         self.job_time = job_time
         self.pause_time = pause_time
-        self._minute = 60
+        self._sec_in_min = 60  #number of seconds
         self.count_of_sessions = 0
         self.history = 'history.json'  #short data
         self.log = 'log.json'  #data with start time, end time(more info)
         self.start_time = ''
         self.end_time = ''
 
-    def time_config(self):  #configuration for time of job and break
+    def configurate_time(self):  #configuration for time of job and break
         if input('Do you want to configurate time? [y/n]: ').lower() == 'y':
             self.job_time = int(input("How many minutes will you work: "))
             self.pause_time = int(input("How many minutes will you relax: "))
             return self.job_time, self.pause_time
 
+    @staticmethod
+    def get_time(fmt="%H:%M:%S"):
+        return datetime.now().strftime(fmt)
+
+
+    def timer(self):
+        for seconds in range(self.job_time * self._sec_in_min, 0, -1):
+            print(f'{int(seconds / 60):02}:{seconds % 60:02}')
+            sleep(1)
+
+
     def job(self):
         print("Start working!!")
-        sleep(self.job_time * self._minute)
+        self.timer()
 
     def pause(self):
         print("Pause")
-        sleep(self.pause_time * self._minute)
+        self.timer()
+        print('break')
 
     def save_history(self):
         data = self.check_json(self.history)
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+        now = self.get_time("%Y-%m-%d %H:%M:%S")
         if self.user_name in data:
             data[self.user_name]['session'] += self.count_of_sessions
             data[self.user_name]['time'] = now
@@ -43,7 +56,7 @@ class Pomidor:
 
     def save_log(self):
         data = self.check_json(self.log)
-        now = datetime.now().strftime("%Y-%m-%d")
+        now = self.get_time("%Y-%m-%d")
         duration = self.find_duration()
         if self.user_name in data:
             name = data[self.user_name]
@@ -73,10 +86,9 @@ class Pomidor:
             json.dump(data, f, indent=4)
 
     def find_duration(self):
-        h, m, s = map(int, self.start_time.split(':'))
-        t1 = timedelta(hours=h, minutes=m)
-        h, m, s = map(int, self.end_time.split(':'))
-        t2 = timedelta(hours=h, minutes=m)
+        fmt = "%H:%M:%S"
+        t1 = datetime.strptime(self.start_time, fmt)
+        t2 = datetime.strptime(self.end_time, fmt)
         if t2 < t1:
             t2 += timedelta(days=1)
         delta = t2 - t1
@@ -85,11 +97,11 @@ class Pomidor:
     def session(self):
         is_running = True
 
-        self.time_config()
+        self.configurate_time()
         while is_running:
-            self.start_time = datetime.now().strftime("%H:%M:%S")
+            self.start_time = self.get_time()
             self.job()
-            self.end_time = datetime.now().strftime("%H:%M:%S")
+            self.end_time = self.get_time()
             self.count_of_sessions += 1  # one session was finished
             self.pause()
             self.save_log()
@@ -102,4 +114,3 @@ if __name__ == '__main__':
     user = Pomidor(input("Enter your name: "))
     user.session()
     print('Bye!')
-
